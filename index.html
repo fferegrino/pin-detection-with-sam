@@ -9,19 +9,42 @@
     border: 1px solid black;
     cursor: crosshair;
   }
+  .card {
+    border: 1px solid black;
+  }
   .image-container {
     /* Create a checkered pattern for background */
     display: inline-block;
     background-image: url('/static/check.jpg');
     background-repeat: repeat;
   }
+
+  .centered-div {
+  width: 1500px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+}
+
+.centered-div .child {
+  flex: 1;
+  margin: 0 10px;
+}
 </style>
 </head>
 <body>
 <h1>Image Labeling Tool</h1>
+<div class="centered-div">
+  <div class="child">
+    <h2>Image</h2>
+
 <img id="image" src="{{image}}" width="{{width}}" height="{{height}}" style="display:none;">
 <canvas id="canvas"></canvas>
+  </div>
+  <div class="child">
+
 <div id="results"></div>
+  </div>
 <script src="/static/app.js"></script>
 </body>
 </html>

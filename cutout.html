@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Labeling Tool</title>
+<style>
+</style>
+</head>
+<body>
+<img id="image" src="{{image}}" width="{{width}}" height="{{height}}" usemap="#pinmap">
+<map name="pinmap">
+  {% for pin in pins %}
+  <area shape="poly" coords="{{pin.coords}}" href="#" alt="{{pin.label}}">
+  {% endfor %}
+</map>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js" integrity="sha256-sw0iNNXmOJbQhYFuC9OF2kOlD5KQKe1y5lfBn4C9Sjg=" crossorigin="anonymous"></script>
+</body>
+</html>

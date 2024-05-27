@@ -53,18 +53,59 @@ window.addEventListener('load', function() {
       results.innerHTML = '';
 
       for (let i = 0; i < data.results.length; i++) {
+        
         const result = data.results[i];
-        const imageContainer = document.createElement('div');
-        imageContainer.classList.add('image-container');
-        const img = document.createElement('img');
-        img.src = result.data;
-        imageContainer.appendChild(img);
-        results.appendChild(imageContainer);
+        const t = createForm(result);
+        // img.src = result.data;
+        // imageContainer.appendChild(img);
+        results.appendChild(t);
       }
     })
     .catch((error) => {
       console.error('Error:', error);
     });
+  }
+
+  function createForm(result) {
+    const card = document.createElement('div');
+    card.classList.add('card');
+
+    const form = document.createElement('form');
+    form.action = '/save';
+    form.method = 'POST';
+
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'id';
+    hiddenInput.value = result.id;
+
+    const hiddenInputPolygon = document.createElement('input');
+    hiddenInputPolygon.type = 'hidden';
+    hiddenInputPolygon.name = 'polygon';
+    hiddenInputPolygon.value = JSON.stringify(result.polygons);
+
+    const submitButton = document.createElement('button');
+    submitButton.textContent = 'Select';
+    submitButton.type = 'submit';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.name = 'name';
+    nameInput.placeholder = 'Name';
+
+
+    form.appendChild(nameInput);
+    form.appendChild(hiddenInput);
+    form.appendChild(hiddenInputPolygon);
+    form.appendChild(submitButton);
+
+    const image = document.createElement('img');
+    image.src = result.data;
+
+    card.appendChild(image);
+
+    card.appendChild(form);
+    return card;
   }
 
 

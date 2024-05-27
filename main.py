@@ -1,14 +1,17 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import Any
+from typing import Annotated, Any
 import numpy as np
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 from PIL import Image
 import supervision as sv
+
+from pathlib import Path
 from uuid import uuid4
+import shutil
 
 import cv2
 
@@ -28,7 +31,7 @@ sam = sam_model_registry[MODEL_TYPE](checkpoint=CHECKPOINT_PATH).to(device=DEVIC
 mask_predictor = SamPredictor(sam)
 
 
-class Item(BaseModel):
+class BoundingBox(BaseModel):
     x: Any
     y: Any
     width: Any
@@ -44,7 +47,7 @@ image_pil = Image.fromarray(image_rgb)
 
 mask_predictor.set_image(image_rgb)
 
-desired_image_width = 1024
+desired_image_width = 750
 
 ratio = desired_image_width / image_pil.width
 
@@ -61,16 +64,44 @@ def turn_pil_image_to_base64(image, format="JPEG"):
     return "data:image/jpeg;base64," + img_str
 
 @app.get("/", response_class=HTMLResponse)
+@app.post("/", response_class=HTMLResponse)
 async def read_root(request: Request):
 
     img_str = turn_pil_image_to_base64(resized_image)
 
     return templates.TemplateResponse("index.html", {"request": request, "image": img_str, "width": resized_image.width, "height": resized_image.height})
 
+@app.get("/cutout")
+async def read_root(request: Request):
+
+    img_str = turn_pil_image_to_base64(image_pil)
+
+    selected = Path("selected")
+    pinmap = []
+    for file in selected.iterdir():
+        if file.suffix == ".txt":
+            with open(file.with_suffix(".txt")) as f:
+                name = f.readline().strip()
+                polygon = eval(f.readline())
+            pinmap.append({
+                "id": file.stem,
+                "label": name,
+                "coords": polygon[0]
+            })
+
+    return templates.TemplateResponse("cutout.html", {"request": request, 
+                                                      
+                                                      "image": img_str, 
+                                                      "width": image_pil.width, 
+                                                      "height": image_pil.height,
+                                                      "id": str(uuid4()),
+                                                        "pins": pinmap
+                                                      })
+
 @app.post("/data")
-async def receive_data(item: Item):
-    print(item)
-    box = [item.x, item.y, item.x + item.width, item.y + item.height]
+async def receive_data(bounding_box: BoundingBox):
+    print(bounding_box)
+    box = [bounding_box.x, bounding_box.y, bounding_box.x + bounding_box.width, bounding_box.y + bounding_box.height]
     unratioed_box = np.array([int(i / ratio) for i in box])
     
 
@@ -96,6 +127,29 @@ async def receive_data(item: Item):
     return {
         "results": results
     }
+
+
+# class SaveCutoutData(BaseModel):
+#     polygon: Any
+#     id: str
+#     name: str
+
+@app.post("/save")
+async def receive_data(request: Request,
+                       id: Annotated[str, Form()],
+                       name: Annotated[str, Form()],
+                          polygon: Annotated[Any, Form()]):
+    
+    with open(f"selected/{id}.txt", "w") as f:
+        f.write(name + "\n")
+        f.write(str(polygon))
+
+    shutil.copy(f"cutouts/{id}.png", f"selected/{id}.png")
+
+
+    return RedirectResponse("/")
+
+
 
 
 def extract_from_mask(image, mask, crop_box=None, margin=10):

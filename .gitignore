@@ -31,3 +31,5 @@ MANIFEST
 
 .venv/
 flagged/
+cutouts/
+selected/
