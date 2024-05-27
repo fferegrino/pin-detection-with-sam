@@ -2,6 +2,7 @@ window.addEventListener('load', function() {
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   const img = document.getElementById('image');
+  const results = document.getElementById('results');
   const boxes = [];  // Array to hold all boxes
 
   // img.onload = function() {
@@ -48,8 +49,18 @@ window.addEventListener('load', function() {
     })
     .then(response => response.json())
     .then(data => {
-      console.log('Success:', data);
-      document.getElementById('result')['src'] = data['data'];
+      // Clear the results div and add the new data
+      results.innerHTML = '';
+
+      for (let i = 0; i < data.results.length; i++) {
+        const result = data.results[i];
+        const imageContainer = document.createElement('div');
+        imageContainer.classList.add('image-container');
+        const img = document.createElement('img');
+        img.src = result.data;
+        imageContainer.appendChild(img);
+        results.appendChild(imageContainer);
+      }
     })
     .catch((error) => {
       console.error('Error:', error);

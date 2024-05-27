@@ -9,13 +9,19 @@
     border: 1px solid black;
     cursor: crosshair;
   }
+  .image-container {
+    /* Create a checkered pattern for background */
+    display: inline-block;
+    background-image: url('/static/check.jpg');
+    background-repeat: repeat;
+  }
 </style>
 </head>
 <body>
 <h1>Image Labeling Tool</h1>
 <img id="image" src="{{image}}" width="{{width}}" height="{{height}}" style="display:none;">
 <canvas id="canvas"></canvas>
-<img id="result" src="">
+<div id="results"></div>
 <script src="/static/app.js"></script>
 </body>
 </html>
