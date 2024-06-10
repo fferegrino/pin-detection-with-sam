@@ -11,7 +11,7 @@
 <img id="image" src="{{image}}" width="{{width}}" height="{{height}}" usemap="#pinmap">
 <map name="pinmap">
   {% for pin in pins %}
-  <area shape="poly" coords="{{pin.coords}}" href="#" alt="{{pin.label}}">
+  <area shape="poly" coords="{{pin.coords}}" href="#" title="{{pin.label}}" alt="{{pin.label}}">
   {% endfor %}
 </map>
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>

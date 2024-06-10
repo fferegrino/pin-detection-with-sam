@@ -13,6 +13,7 @@ window.addEventListener('load', function() {
   let start = { x: 0, y: 0 };
   let isDrawing = false;
 
+
   canvas.addEventListener('mousedown', function(e) {
     start = { x: e.offsetX, y: e.offsetY };
     isDrawing = true;
@@ -31,7 +32,14 @@ window.addEventListener('load', function() {
     if (isDrawing) {
       const endX = e.offsetX;
       const endY = e.offsetY;
-      const box = { x: start.x, y: start.y, width: endX - start.x, height: endY - start.y };
+
+      x1 = Math.min(start.x, endX);
+      y1 = Math.min(start.y, endY);
+      x2 = Math.max(start.x, endX);
+      y2 = Math.max(start.y, endY);
+
+      const box = { x1, y1, x2, y2 };
+      console.log(box);
       boxes.push(box);
       sendBoxData(box);
       redrawCanvas();
@@ -40,7 +48,7 @@ window.addEventListener('load', function() {
   });
 
   function sendBoxData(box) {
-    fetch('/data', {
+    fetch('/cut', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -49,6 +57,7 @@ window.addEventListener('load', function() {
     })
     .then(response => response.json())
     .then(data => {
+      console.log('Success:', data.results);
       // Clear the results div and add the new data
       results.innerHTML = '';
 
@@ -56,8 +65,6 @@ window.addEventListener('load', function() {
         
         const result = data.results[i];
         const t = createForm(result);
-        // img.src = result.data;
-        // imageContainer.appendChild(img);
         results.appendChild(t);
       }
     })
@@ -71,18 +78,13 @@ window.addEventListener('load', function() {
     card.classList.add('card');
 
     const form = document.createElement('form');
-    form.action = '/save';
+    form.action = '/select_cutout';
     form.method = 'POST';
 
     const hiddenInput = document.createElement('input');
     hiddenInput.type = 'hidden';
     hiddenInput.name = 'id';
     hiddenInput.value = result.id;
-
-    const hiddenInputPolygon = document.createElement('input');
-    hiddenInputPolygon.type = 'hidden';
-    hiddenInputPolygon.name = 'polygon';
-    hiddenInputPolygon.value = JSON.stringify(result.polygons);
 
     const submitButton = document.createElement('button');
     submitButton.textContent = 'Select';
@@ -93,16 +95,18 @@ window.addEventListener('load', function() {
     nameInput.name = 'name';
     nameInput.placeholder = 'Name';
 
-
     form.appendChild(nameInput);
     form.appendChild(hiddenInput);
-    form.appendChild(hiddenInputPolygon);
     form.appendChild(submitButton);
 
     const image = document.createElement('img');
-    image.src = result.data;
+    image.src = result.image;
 
-    card.appendChild(image);
+    const div = document.createElement('div');
+    div.classList.add('image-container');
+
+    div.appendChild(image);
+    card.appendChild(div);
 
     card.appendChild(form);
     return card;
@@ -117,10 +121,36 @@ window.addEventListener('load', function() {
     });
   }
 
-  function drawBox(x, y, width, height) {
+  function drawBox(x, y, width, height, fill = false) {
     ctx.beginPath();
     ctx.rect(x, y, width, height);
     ctx.strokeStyle = 'red';
+    if (fill) {
+      ctx.fillStyle = '#ff000033';
+      ctx.fill();
+    }
     ctx.stroke();
+  }
+
+  function drawPolygon(points) {
+    ctx.beginPath();
+    ctx.moveTo(points[0][0] * ratio, points[0][1] * ratio);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i][0] * ratio, points[i][1] * ratio);
+    }
+    ctx.fillStyle = '#ff0000FF';
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+
+  for (let i = 0; i < existingCutouts.length; i++) {
+    const cutout = existingCutouts[i];
+    console.log(cutout);
+    for (let i = 0; i < cutout.polygons.length; i++) {
+      const points = cutout.polygons[i];
+      drawPolygon(points);
+    }
   }
 });

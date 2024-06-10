@@ -33,3 +33,5 @@ MANIFEST
 flagged/
 cutouts/
 selected/
+
+.DS_Store
