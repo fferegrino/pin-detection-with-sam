@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Labeling Tool</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="/static/app.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/3.2.1/mustache.min.js"></script>
+</head>
+
+<body>
+    <main class="container-fluid">
+        <div class="centered-div">
+            <div class="child">
+                <img id="image" src="{{image}}" width="{{width}}" height="{{height}}" style="display:none;" />
+                <canvas id="canvas"></canvas>
+            </div>
+            <div class="child">
+                <div id="results"></div>
+            </div>
+        </div>
+    </main>
+    <script>
+        const ratio = {{ratio}};
+        const existingCutouts = {{existing_cutouts | tojson}};
+    </script>
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

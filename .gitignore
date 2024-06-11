@@ -31,3 +31,5 @@ MANIFEST
 
 .venv/
 flagged/
+resources/
+selected/
