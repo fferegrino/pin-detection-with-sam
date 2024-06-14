@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from web.resources import download_resources
 from web.sam import get_mask_predictor
+from web.selected import load_selected_cutouts
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
@@ -23,6 +24,8 @@ templates = Jinja2Templates(directory="web/templates")
 resources = download_resources()
 
 original_image = cv2.cvtColor(cv2.imread(str(resources["image_path"])), cv2.COLOR_BGR2RGB)
+
+og_image = Image.fromarray(original_image)
 
 image_to_show = Image.fromarray(original_image)
 
@@ -46,12 +49,7 @@ selected_folder = "selected"
 def get_index(request: Request):
     img = turns_image_to_base64(image_to_show)
 
-    existing_cutouts = []
-    for file in os.listdir(selected_folder):
-        if file.endswith(".json"):
-            with open(f"{selected_folder}/{file}") as f:
-                metadata = json.load(f)
-                existing_cutouts.append(metadata)
+    existing_cutouts = load_selected_cutouts()
 
     data = {
         "request": request,
@@ -125,6 +123,18 @@ def post_select_cutout(request: Request, id: Annotated[str, Form()], name: Annot
         f.write(json.dumps(metadata))
 
     return RedirectResponse("/")
+
+@app.get("/view/")
+def get_view(request: Request):
+
+    existing_cutouts = load_selected_cutouts()
+    return templates.TemplateResponse("view.html.jinja", {"request": request,
+                                                          
+                                                          "imageWidth": og_image.width,
+                                                            "imageHeight": og_image.height,
+                                                            "existing_cutouts": existing_cutouts,
+                                                          "image": turns_image_to_base64(og_image),})
+
 
 
 def extract_from_mask(image, mask, crop_box=None, margin=10):

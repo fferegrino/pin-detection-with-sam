@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enamel Pin Collection</title>
+    <style>
+body, html {
+    height: 100%;
+    margin: 0;
+    /* overflow: hidden; */
+}
+
+.magnifier-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#pinsImage {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+
+    </style>
+
+    <!-- Optional: If targeting ES5 browers, as of ImageMapster v1.3.0, a Promise polyfill is required! -->
+<script
+  type="text/javascript"
+  src="https://cdn.jsdelivr.net/npm/es6-promise/dist/es6-promise.auto.min.js"
+></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/imagemapster/1.8.0/jquery.imagemapster.min.js" integrity="sha512-18b1YKEQCvv8P4pvvf1lFmJIYLjU6gqzz8Cw+J/Q5lFL5bf56QtK8xMLH/7Vvv+FGRxscyeP7G5pq2AgtQEyAA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <div class="magnifier-container">
+        <img src="{{image}}" alt="Enamel Pins Collection" id="pinsImage" usemap="#pinmap">
+    </div>
+<map name="pinmap" id="pinmap"></map>
+
+
+
+    <script>
+        const imageWidth = {{imageWidth}};
+        const existingCutouts = {{existing_cutouts | tojson}};
+        const pinmap = document.getElementById('pinmap');
+
+        // Get current browser width
+        const browserWidth = window.innerWidth;
+
+        const ratio = browserWidth/imageWidth  ;
+
+    for (let i = 0; i < existingCutouts.length; i++) {
+      const cutout = existingCutouts[i];
+      for (let i = 0; i < cutout.polygons.length; i++) {
+          const points = cutout.polygons[i];
+            const ratioedPoints = [];
+            for (let j = 0; j < points.length; j++) {
+                ratioedPoints.push(parseInt(points[j][0]));
+                ratioedPoints.push(parseInt(points[j][1]));
+            }
+            const area = document.createElement('area');
+            area.setAttribute('shape', 'poly');
+            area.setAttribute('coords', ratioedPoints.join(','));
+            area.setAttribute('alt', cutout.name);
+            area.setAttribute('data-key', cutout.uuid);
+            area.setAttribute('href', "#");
+            pinmap.appendChild(area);
+      }
+  }
+</script>
+<script>
+
+  $(function () {
+$("#pinsImage").mapster({
+      enableAutoResizeSupport: true,
+  autoResize: true,
+    staticState: true,
+  fillColor: '000000',
+  mapKey: 'data-key',
+  fillOpacity: 0.5,
+    onClick: function (data) {
+    var $me = $(this), // HTMLAreaElement element clicked
+      e = data.e, // jQueryEventObject - see https://api.jquery.com/category/events/event-object/
+      item = data.list_target, // JQueryObject from boundList (if applicable)
+      key = data.key, // mapKey for this area
+      selected = data.selected; // true or false based on current area state
+      console.log(key);
+
+  }
+}).mapster('set', true, 'all');
+  });
+</script>
+</body>
+</html>
