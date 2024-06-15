@@ -43,6 +43,8 @@ os.makedirs(temp_folder, exist_ok=True)
 
 selected_folder = "selected"
 
+from shapely import buffer
+
 
 @app.get("/")
 @app.post("/")
@@ -50,6 +52,25 @@ def get_index(request: Request):
     img = turns_image_to_base64(image_to_show)
 
     existing_cutouts = load_selected_cutouts()
+
+
+    # Cleanup the polygons with Shapely
+    for cutout in existing_cutouts:
+        polygons = [Polygon(poly) for poly in cutout["polygons"]]
+        result = unary_union(polygons)
+        result_final = []
+        if result.geom_type == "Polygon":
+            resupplt = buffer(result, 10)
+            x, y  = resupplt.exterior.coords.xy
+            result_final.append(list(zip(x, y)))
+        
+        cutout["polygons"] = result_final
+
+# (Pdb) cutout["polygons"][0][0][0]
+# 1342.0
+# (Pdb) cutout["polygons"][0][1][0]
+
+        # cutout["polygons"] = [poly.exterior.coords.xy for poly in unary_union(polygons)]
 
     data = {
         "request": request,
@@ -124,10 +145,34 @@ def post_select_cutout(request: Request, id: Annotated[str, Form()], name: Annot
 
     return RedirectResponse("/")
 
+
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
+
 @app.get("/view/")
 def get_view(request: Request):
 
     existing_cutouts = load_selected_cutouts()
+
+
+    # Cleanup the polygons with Shapely
+    for cutout in existing_cutouts:
+        polygons = [Polygon(poly) for poly in cutout["polygons"]]
+        result = unary_union(polygons)
+        result_final = []
+        if result.geom_type == "Polygon":
+            resupplt = buffer(result, 10)
+            x, y  = resupplt.exterior.coords.xy
+            result_final.append(list(zip(x, y)))
+        
+        cutout["polygons"] = result_final
+
+
+
+    for cutout in existing_cutouts:
+        cutout["image"] = turns_image_to_base64(Image.open(f"{selected_folder}/{cutout['uuid']}.png")
+                                                , format="PNG")
+    
     return templates.TemplateResponse("view.html.jinja", {"request": request,
                                                           
                                                           "imageWidth": og_image.width,
