@@ -15,6 +15,8 @@ from pydantic import BaseModel
 
 from web.resources import download_resources
 from web.sam import get_mask_predictor
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
@@ -71,6 +73,34 @@ class BoundingBox(BaseModel):
     y2: float
 
 
+def refine_mask(mask):
+    polygons = [Polygon(poly) for poly in sv.mask_to_polygons(mask)]
+    single_polygon = unary_union(polygons)
+
+    if single_polygon.geom_type == "Polygon":
+        selected_polygon = single_polygon
+
+    elif single_polygon.geom_type == "MultiPolygon":
+        selected_polygon = max(single_polygon.geoms, key=lambda x: x.area)
+
+    else:
+        raise ValueError(f"Unexpected geometry type: {single_polygon.geom_type}")
+
+
+    selected_polygon = selected_polygon.buffer(10, join_style=1).buffer(-10.0, join_style=1)
+    polygon = []
+    for x, y in zip(selected_polygon.exterior.xy[0], selected_polygon.exterior.xy[1]):
+        polygon.append(x)
+        polygon.append(y)
+
+    new_mask = sv.polygon_to_mask(
+        np.array(selected_polygon.exterior.coords, dtype=np.int32),
+        (original_image.shape[1], original_image.shape[0]),
+    )
+
+    return new_mask, polygon
+
+
 @app.post("/cut/")
 def post_cut(request: Request, box: BoundingBox):
     box = np.array([box.x1, box.y1, box.x2, box.y2])
@@ -81,7 +111,11 @@ def post_cut(request: Request, box: BoundingBox):
     results = []
     for mask in masks:
         uuid = str(uuid4())
-        cutout, bbox = extract_from_mask(original_image, mask)
+
+        refined_mask, refined_polygon = refine_mask(mask)
+
+        cutout, bbox = extract_from_mask(original_image, refined_mask)
+
         base64_cutout = turns_image_to_base64(cutout, format="PNG")
         results.append(
             {
@@ -99,7 +133,7 @@ def post_cut(request: Request, box: BoundingBox):
                 "x2": original_box[2],
                 "y2": original_box[3],
             },
-            "polygons": [poly.tolist() for poly in sv.mask_to_polygons(mask)],
+            "polygon": refined_polygon,
         }
 
         with open(f"{temp_folder}/{uuid}.png", "wb") as f:

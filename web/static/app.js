@@ -125,9 +125,9 @@ window.addEventListener('load', function() {
 
   function drawPolygon(points) {
       ctx.beginPath();
-      ctx.moveTo(points[0][0] * ratio, points[0][1] * ratio);
-      for (let i = 1; i < points.length; i++) {
-          ctx.lineTo(points[i][0] * ratio, points[i][1] * ratio);
+      ctx.moveTo(points[0] * ratio, points[1] * ratio);
+      for (let i = 2; i < points.length; i += 2) {
+        ctx.lineTo(points[i] * ratio, points[i + 1] * ratio);
       }
       ctx.fillStyle = '#ff0000FF';
       ctx.closePath();
@@ -137,11 +137,7 @@ window.addEventListener('load', function() {
 
   for (let i = 0; i < existingCutouts.length; i++) {
       const cutout = existingCutouts[i];
-      console.log(cutout);
-      for (let i = 0; i < cutout.polygons.length; i++) {
-          const points = cutout.polygons[i];
-          drawPolygon(points);
-          contours.push(points);
-      }
+      drawPolygon(cutout.polygon);
+      contours.push(cutout.polygon);
   }
 });
