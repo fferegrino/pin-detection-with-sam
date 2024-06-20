@@ -12,11 +12,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image
 from pydantic import BaseModel
+from shapely.geometry import Polygon
+from shapely.ops import unary_union
+from starlette.responses import FileResponse
 
 from web.resources import download_resources
 from web.sam import get_mask_predictor
-from shapely.geometry import Polygon
-from shapely.ops import unary_union
+from web.selected import load_selected_cutouts
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="web/static"), name="static")
@@ -25,6 +27,8 @@ templates = Jinja2Templates(directory="web/templates")
 resources = download_resources()
 
 original_image = cv2.cvtColor(cv2.imread(str(resources["image_path"])), cv2.COLOR_BGR2RGB)
+
+og_image = Image.fromarray(original_image)
 
 image_to_show = Image.fromarray(original_image)
 
@@ -48,12 +52,7 @@ selected_folder = "selected"
 def get_index(request: Request):
     img = turns_image_to_base64(image_to_show)
 
-    existing_cutouts = []
-    for file in os.listdir(selected_folder):
-        if file.endswith(".json"):
-            with open(f"{selected_folder}/{file}") as f:
-                metadata = json.load(f)
-                existing_cutouts.append(metadata)
+    existing_cutouts = load_selected_cutouts()
 
     data = {
         "request": request,
@@ -85,7 +84,6 @@ def refine_mask(mask):
 
     else:
         raise ValueError(f"Unexpected geometry type: {single_polygon.geom_type}")
-
 
     selected_polygon = selected_polygon.buffer(10, join_style=1).buffer(-10.0, join_style=1)
     polygon = []
@@ -159,6 +157,48 @@ def post_select_cutout(request: Request, id: Annotated[str, Form()], name: Annot
         f.write(json.dumps(metadata))
 
     return RedirectResponse("/")
+
+
+@app.get("/view/")
+def get_view(request: Request):
+
+    existing_cutouts = load_selected_cutouts()
+
+    for cutout in existing_cutouts:
+        cutout["image"] = turns_image_to_base64(Image.open(f"{selected_folder}/{cutout['uuid']}.png"), format="PNG")
+
+    return templates.TemplateResponse(
+        "view.html.jinja",
+        {
+            "request": request,
+            "imageWidth": og_image.width,
+            "imageHeight": og_image.height,
+            "existing_cutouts": existing_cutouts,
+            "image": turns_image_to_base64(og_image),
+        },
+    )
+
+
+@app.get("/view/download/")
+def get_download_view(request: Request):
+    existing_cutouts = load_selected_cutouts()
+
+    for cutout in existing_cutouts:
+        cutout["image"] = turns_image_to_base64(Image.open(f"{selected_folder}/{cutout['uuid']}.png"), format="PNG")
+
+    view_template = templates.get_template("view.html.jinja")
+    view_html = view_template.render(
+        request=request,
+        imageWidth=og_image.width,
+        imageHeight=og_image.height,
+        existing_cutouts=existing_cutouts,
+        image=turns_image_to_base64(og_image),
+    )
+
+    with open(f"{temp_folder}/view.html", "w") as f:
+        f.write(view_html)
+
+    return FileResponse(f"{temp_folder}/view.html", media_type="text/html", filename="index.html")
 
 
 def extract_from_mask(image, mask, crop_box=None, margin=10):

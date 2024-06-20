@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enamel Pin Collection</title>
+  <style>
+body, html {
+    height: 100%;
+    margin: 0;
+    /* overflow: hidden; */
+}
+
+.magnifier-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+#pinsImage {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/es6-promise/dist/es6-promise.auto.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/imagemapster/1.8.0/jquery.imagemapster.min.js" integrity="sha512-18b1YKEQCvv8P4pvvf1lFmJIYLjU6gqzz8Cw+J/Q5lFL5bf56QtK8xMLH/7Vvv+FGRxscyeP7G5pq2AgtQEyAA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+
+  <dialog id="modal">
+    <article>
+      <header>
+        <p>
+          <strong id="pin-name">🗓️ Thank You for Registering!</strong>
+        </p>
+      </header>
+      <img src="#" alt="Enamel Pins Collection" id="pin-image">
+    </article>
+  </dialog>
+  <div class="magnifier-container">
+      <img src="{{image}}" alt="Enamel Pins Collection" id="pinsImage" usemap="#pinmap">
+  </div>
+  <map name="pinmap" id="pinmap">
+      {%- for cutout in existing_cutouts %}
+      <area shape="poly" coords="{{cutout.polygon | join(',')}}" 
+        data-name="{{cutout.name}}"
+        data-image="{{cutout.image}}"
+        alt="{{cutout.name}}" data-key="{{cutout.uuid}}" href="#">
+      {%- endfor %}
+  </map>
+  <script>
+const modal = document.getElementById("modal");
+
+// Config
+const isOpenClass = "modal-is-open";
+const openingClass = "modal-is-opening";
+const closingClass = "modal-is-closing";
+const scrollbarWidthCssVar = "--pico-scrollbar-width";
+const animationDuration = 400; // ms
+let visibleModal = null;
+
+// Toggle modal
+const toggleModal = (event) => {
+  // event.preventDefault();
+  const modal = document.getElementById("modal");
+  if (!modal) return;
+  modal && (modal.open ? closeModal(modal) : openModal(modal));
+};
+
+// Open modal
+const openModal = (modal) => {
+  const {
+    documentElement: html
+  } = document;
+  //const scrollbarWidth = getScrollbarWidth();
+  //  if (scrollbarWidth) {
+  //    html.style.setProperty(scrollbarWidthCssVar, `${scrollbarWidth}px`);
+  //  }
+  html.classList.add(isOpenClass, openingClass);
+  setTimeout(() => {
+    visibleModal = modal;
+    html.classList.remove(openingClass);
+  }, animationDuration);
+  modal.showModal();
+};
+
+// Close modal
+const closeModal = (modal) => {
+  visibleModal = null;
+  const {
+    documentElement: html
+  } = document;
+  html.classList.add(closingClass);
+  setTimeout(() => {
+    html.classList.remove(closingClass, isOpenClass);
+    html.style.removeProperty(scrollbarWidthCssVar);
+    modal.close();
+  }, animationDuration);
+};
+
+// Close with a click outside
+document.addEventListener("click", (event) => {
+  if (visibleModal === null) return;
+  const modalContent = visibleModal.querySelector("article");
+  const isClickInside = modalContent.contains(event.target);
+  !isClickInside && closeModal(visibleModal);
+});
+
+// Close with Esc key
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && visibleModal) {
+    closeModal(visibleModal);
+  }
+});
+
+$(function() {
+  $("#pinsImage").mapster({
+    enableAutoResizeSupport: true,
+    autoResize: true,
+    staticState: true,
+    fillColor: '000000',
+    mapKey: 'data-key',
+    fillOpacity: 0.5,
+    onClick: function(data) {
+      console.log(data);
+      toggleModal()
+      document.getElementById("pin-name").textContent = data.e.target.alt;
+      document.getElementById("pin-image").src = data.e.target.dataset.image;
+      console.log(data.e.target.data.image);
+
+    }
+  }).mapster('set', true, 'all');
+});
+</script>
+</body>
+</html>
