@@ -11,25 +11,19 @@ body, html {
     /* overflow: hidden; */
 }
 
-.magnifier-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-}
-
 #canvasMapContainer {
     width: 100%;
     height: auto;
     display: block;
 }
 
-#info {
+#tooltip {
     position: absolute;
     top: 0;
     left: 0;
 }
 
-#info > article {
+#tooltip > article {
   margin-bottom: 0;
 }
   </style>
@@ -40,9 +34,7 @@ body, html {
 </head>
 <body>
 
-  <div class="magnifier-container">
-      <img src="{{image}}" alt="Enamel Pins Collection" id="canvasMapContainer" usemap="#pinmap">
-  </div>
+  <img src="{{image}}" alt="Enamel Pins Collection" id="canvasMapContainer" usemap="#pinmap">
   <map name="pinmap" id="pinmap">
       {%- for cutout in existing_cutouts %}
       <area shape="poly" coords="{{cutout.polygon | join(',')}}" 
@@ -66,7 +58,7 @@ body, html {
   </dialog>
 
   <!-- Tooltip -->
-  <div id="info" style="display: none;">
+  <div id="tooltip" style="display: none;">
     <article>
       <header><h3 id="infoPinNameTooltip"></h3></header>
       <p id="infoPinDescriptionTooltip" style="display: none;"></p>
@@ -81,13 +73,13 @@ $(document).ready(function() {
     const closingClass = "modal-is-closing";
     const scrollbarWidthCssVar = "--pico-scrollbar-width";
     const animationDuration = 400; // ms
-    let visibleModal = null;
-    const buffer = 10;
+    const padding = 10;
 
-    const $info = $("#info");
+    const $tooltip = $("#tooltip");
     const $infoPinNameTooltip = $("#infoPinNameTooltip");
     const $infoPinNameModal = $("#infoPinNameModal");
     const $canvasMapContainer = $("#canvasMapContainer");
+    let visibleModal = null;
 
     // Toggle modal
     const toggleModal = () => {
@@ -144,7 +136,7 @@ $(document).ready(function() {
             toggleModal();
         },
         onMouseout: function() {
-            $info.hide();
+            $tooltip.hide();
         },
         onMouseover: function(data) {
             const coords = $(this).attr('coords').split(',').map(coord => parseInt(coord, 10));
@@ -158,33 +150,34 @@ $(document).ready(function() {
 
             $infoPinNameTooltip.text(data.e.target.dataset.name);
 
-            const infoWidth = $info.width();
-            const infoHeight = $info.height();
+            const infoWidth = $tooltip.width();
+            const infoHeight = $tooltip.height();
 
             let positionX = "centre";
-            if (x1 - infoWidth - buffer < 0) {
+            if (x1 - infoWidth - padding < 0) {
                 positionX = "left";
-            } else if (x2 + infoWidth + buffer > $canvasMapContainer.width()) {
+            } else if (x2 + infoWidth + padding > $canvasMapContainer.width()) {
                 positionX = "right";
             }
 
             let positionY = "top";
-            if (y1 - infoHeight - buffer < $(window).scrollTop()) {
+            if (y1 - infoHeight - padding < $(window).scrollTop()) {
                 positionY = "bottom";
             }
 
             const positionXmap = {
-                "left": x2 + buffer,
+                "left": x2 + padding,
                 "centre": centerX - infoWidth / 2,
-                "right": x1 - infoWidth - buffer
+                "right": x1 - infoWidth - padding
             };
 
             const positionYmap = {
-                "top": y1 - buffer - infoHeight,
-                "bottom": y2 + buffer
+                "top": y1 - padding - infoHeight,
+                "bottom": y2 + padding
             };
 
-            $info.css({
+            console.log(`Showing tooltip at ${positionXmap[positionX]}, ${positionYmap[positionY]} with positionX: ${positionX} and positionY: ${positionY}`)
+            $tooltip.css({
                 top: positionYmap[positionY],
                 left: positionXmap[positionX],
                 boxShadow: "0px 0px 84px 0px rgba(0, 0, 0, 0.80)"
