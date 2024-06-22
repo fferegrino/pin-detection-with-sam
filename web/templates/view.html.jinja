@@ -40,16 +40,6 @@ body, html {
 </head>
 <body>
 
-  <dialog id="modal">
-    <article>
-      <header>
-        <p>
-          <strong id="pin-name">🗓️ Thank You for Registering!</strong>
-        </p>
-      </header>
-      <img src="#" alt="Enamel Pins Collection" id="pin-image">
-    </article>
-  </dialog>
   <div class="magnifier-container">
       <img src="{{image}}" alt="Enamel Pins Collection" id="canvasMapContainer" usemap="#pinmap">
   </div>
@@ -57,15 +47,29 @@ body, html {
       {%- for cutout in existing_cutouts %}
       <area shape="poly" coords="{{cutout.polygon | join(',')}}" 
         data-name="{{cutout.name}}"
+
+        {%- if cutout.description %}
+        data-description="{{cutout.description}}"
+        {%- endif %}
         alt="{{cutout.name}}" data-key="{{cutout.uuid}}" href="#">
       {%- endfor %}
   </map>
 
+  <!-- Modal -->
+  <dialog id="modal">
+    <article>
+      <header>
+          <h3 id="infoPinNameModal"></h3>
+      </header>
+      <p id="infoPinDescriptionModal"></p>
+    </article>
+  </dialog>
+
   <!-- Tooltip -->
   <div id="info" style="display: none;">
     <article>
-      <header><h3 id="infoPinName"></h3></header>
-      <p id="infoPinDescription"></p>
+      <header><h3 id="infoPinNameTooltip"></h3></header>
+      <p id="infoPinDescriptionTooltip" style="display: none;"></p>
     </article>
   </div>
 
@@ -78,8 +82,10 @@ const openingClass = "modal-is-opening";
 const closingClass = "modal-is-closing";
 const scrollbarWidthCssVar = "--pico-scrollbar-width";
 const animationDuration = 400; // ms
-const infoPinName = document.getElementById("infoPinName");
-const infoPinDescription = document.getElementById("infoPinDescription");
+const infoPinNameTooltip = document.getElementById("infoPinNameTooltip");
+const infoPinDescriptionTooltip = document.getElementById("infoPinDescriptionTooltip");
+const infoPinNameModal = document.getElementById("infoPinNameModal");
+const infoPinDescriptionModal = document.getElementById("infoPinDescriptionModal");
 let visibleModal = null;
 const buffer = 10;
 
@@ -148,9 +154,7 @@ $(function() {
     mapKey: 'data-key',
     fillOpacity: 0.0,
     onClick: function (data) {
-      console.log(data.key);
-      console.log(data.options);
-      console.log($(this));
+      infoPinNameModal.textContent = data.e.target.dataset.name;
       toggleModal();
     },
     onMouseout: function(data) {
@@ -178,7 +182,7 @@ $(function() {
       console.log(x1, y1, x2, y2, centerX); 
 
 
-      infoPinName.textContent = data.e.target.dataset.name;
+      infoPinNameTooltip.textContent = data.e.target.dataset.name;
 
       const infoWidth = $info.width();
       const infoHeight = $info.height();
