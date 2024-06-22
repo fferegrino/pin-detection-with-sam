@@ -74,151 +74,125 @@ body, html {
   </div>
 
   <script>
-const modal = document.getElementById("modal");
+$(document).ready(function() {
+    const $modal = $("#modal");
+    const isOpenClass = "modal-is-open";
+    const openingClass = "modal-is-opening";
+    const closingClass = "modal-is-closing";
+    const scrollbarWidthCssVar = "--pico-scrollbar-width";
+    const animationDuration = 400; // ms
+    let visibleModal = null;
+    const buffer = 10;
 
-// Config
-const isOpenClass = "modal-is-open";
-const openingClass = "modal-is-opening";
-const closingClass = "modal-is-closing";
-const scrollbarWidthCssVar = "--pico-scrollbar-width";
-const animationDuration = 400; // ms
-const infoPinNameTooltip = document.getElementById("infoPinNameTooltip");
-const infoPinDescriptionTooltip = document.getElementById("infoPinDescriptionTooltip");
-const infoPinNameModal = document.getElementById("infoPinNameModal");
-const infoPinDescriptionModal = document.getElementById("infoPinDescriptionModal");
-let visibleModal = null;
-const buffer = 10;
+    const $info = $("#info");
+    const $infoPinNameTooltip = $("#infoPinNameTooltip");
+    const $infoPinNameModal = $("#infoPinNameModal");
+    const $canvasMapContainer = $("#canvasMapContainer");
 
-const $info = $("#info");
+    // Toggle modal
+    const toggleModal = () => {
+        if (!$modal.length) return;
+        $modal[0].open ? closeModal() : openModal();
+    };
 
-// Toggle modal
-const toggleModal = (event) => {
-  // event.preventDefault();
-  const modal = document.getElementById("modal");
-  if (!modal) return;
-  modal && (modal.open ? closeModal(modal) : openModal(modal));
-};
+    // Open modal
+    const openModal = () => {
+        $("html").addClass(isOpenClass).addClass(openingClass);
+        setTimeout(() => {
+            visibleModal = $modal;
+            $("html").removeClass(openingClass);
+        }, animationDuration);
+        $modal[0].showModal();
+    };
 
-// Open modal
-const openModal = (modal) => {
-  const {
-    documentElement: html
-  } = document;
-  html.classList.add(isOpenClass, openingClass);
-  setTimeout(() => {
-    visibleModal = modal;
-    html.classList.remove(openingClass);
-  }, animationDuration);
-  modal.showModal();
-};
+    // Close modal
+    const closeModal = () => {
+        visibleModal = null;
+        $("html").addClass(closingClass);
+        setTimeout(() => {
+            $("html").removeClass(closingClass).removeClass(isOpenClass);
+            $("html").css(scrollbarWidthCssVar, '');
+            $modal[0].close();
+        }, animationDuration);
+    };
 
-// Close modal
-const closeModal = (modal) => {
-  visibleModal = null;
-  const {
-    documentElement: html
-  } = document;
-  html.classList.add(closingClass);
-  setTimeout(() => {
-    html.classList.remove(closingClass, isOpenClass);
-    html.style.removeProperty(scrollbarWidthCssVar);
-    modal.close();
-  }, animationDuration);
-};
+    // Close with a click outside
+    $(document).on("click", (event) => {
+        if (visibleModal === null) return;
+        const isClickInside = $(visibleModal).find("article").has(event.target).length > 0;
+        if (!isClickInside) closeModal();
+    });
 
-// Close with a click outside
-document.addEventListener("click", (event) => {
-  if (visibleModal === null) return;
-  const modalContent = visibleModal.querySelector("article");
-  const isClickInside = modalContent.contains(event.target);
-  !isClickInside && closeModal(visibleModal);
+    // Close with Esc key
+    $(document).on("keydown", (event) => {
+        if (event.key === "Escape" && visibleModal) {
+            closeModal();
+        }
+    });
+
+    $canvasMapContainer.mapster({
+        enableAutoResizeSupport: true,
+        autoResize: true,
+        isSelectable: false,
+        stroke: false,
+        strokeColor: '00FF00',
+        strokeWidth: 5,
+        mapKey: 'data-key',
+        fillOpacity: 0.0,
+        onClick: function (data) {
+            $infoPinNameModal.text(data.e.target.dataset.name);
+            toggleModal();
+        },
+        onMouseout: function() {
+            $info.hide();
+        },
+        onMouseover: function(data) {
+            const coords = $(this).attr('coords').split(',').map(coord => parseInt(coord, 10));
+            const xCoords = coords.filter((_, i) => i % 2 === 0);
+            const yCoords = coords.filter((_, i) => i % 2 === 1);
+            const x1 = Math.min(...xCoords);
+            const y1 = Math.min(...yCoords);
+            const x2 = Math.max(...xCoords);
+            const y2 = Math.max(...yCoords);
+            const centerX = (x1 + x2) / 2;
+
+            $infoPinNameTooltip.text(data.e.target.dataset.name);
+
+            const infoWidth = $info.width();
+            const infoHeight = $info.height();
+
+            let positionX = "centre";
+            if (x1 - infoWidth - buffer < 0) {
+                positionX = "left";
+            } else if (x2 + infoWidth + buffer > $canvasMapContainer.width()) {
+                positionX = "right";
+            }
+
+            let positionY = "top";
+            if (y1 - infoHeight - buffer < $(window).scrollTop()) {
+                positionY = "bottom";
+            }
+
+            const positionXmap = {
+                "left": x2 + buffer,
+                "centre": centerX - infoWidth / 2,
+                "right": x1 - infoWidth - buffer
+            };
+
+            const positionYmap = {
+                "top": y1 - buffer - infoHeight,
+                "bottom": y2 + buffer
+            };
+
+            $info.css({
+                top: positionYmap[positionY],
+                left: positionXmap[positionX],
+                boxShadow: "0px 0px 84px 0px rgba(0, 0, 0, 0.80)"
+            }).show();
+        }
+    }).mapster('set', true, 'all');
 });
 
-// Close with Esc key
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && visibleModal) {
-    closeModal(visibleModal);
-  }
-});
-
-const $canvasMapContainer = $("#canvasMapContainer");
-
-$(function() {
-  $canvasMapContainer.mapster({
-    enableAutoResizeSupport: true,  
-    autoResize: true,
-    isSelectable: false,
-    stroke: false,
-    strokeColor: '00FF00',
-    strokeWidth: 5,
-    mapKey: 'data-key',
-    fillOpacity: 0.0,
-    onClick: function (data) {
-      infoPinNameModal.textContent = data.e.target.dataset.name;
-      toggleModal();
-    },
-    onMouseout: function(data) {
-      $info.hide();
-    },
-    onMouseover: function(data) {
-      var $me = $(this)
-      console.log(data.key);
-      console.log(data.options);
-      console.log($me);
-
-      // Convert the coords to an array of integers
-      const coords = $me[0].coords.split(',');
-      const coordsInt = coords.map(coord => parseInt(coord, 10));
-
-      // Get the bounding box of the polygon
-      const x1 = Math.min(...coordsInt.filter((_, i) => i % 2 === 0));
-      const y1 = Math.min(...coordsInt.filter((_, i) => i % 2 === 1));
-      const x2 = Math.max(...coordsInt.filter((_, i) => i % 2 === 0));
-      const y2 = Math.max(...coordsInt.filter((_, i) => i % 2 === 1));
-
-      // Get the center of the bounding box
-      const centerX = (x1 + x2) / 2;
-
-      console.log(x1, y1, x2, y2, centerX); 
-
-
-      infoPinNameTooltip.textContent = data.e.target.dataset.name;
-
-      const infoWidth = $info.width();
-      const infoHeight = $info.height();
-
-      var positionX = "centre"
-      if (x1 - infoWidth - buffer < 0) {
-        positionX = "left";
-      } else if (x2 + infoWidth + buffer > $canvasMapContainer.width()) {
-        positionX = "right";
-      }
-
-      var positionY = "top";
-      if (y1 - infoHeight - buffer < window.pageYOffset) {
-        positionY = "bottom";
-      }
-
-      const positionXmap = {
-        "left": x2 + buffer,
-        "centre": centerX - infoWidth/2,
-        "right": x1 - infoWidth - buffer
-      }
-
-      const positionYmap = {
-        "top": y1 - buffer - infoHeight,
-        "bottom": y2 + buffer
-      }
-      
-      $info.css({
-        top: positionYmap[positionY],
-        left: positionXmap[positionX],
-        boxShadow: "0px 0px 84px 0px rgba(0, 0, 0, 0.80)"
-        
-      }).show();
-    }
-  }).mapster('set', true, 'all');
-});
 </script>
 </body>
 </html>
