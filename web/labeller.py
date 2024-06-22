@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image
 from pydantic import BaseModel
 from shapely.geometry import Polygon
+from shapely import simplify
 from shapely.ops import unary_union
 from starlette.responses import FileResponse
 
@@ -85,7 +86,9 @@ def refine_mask(mask):
     else:
         raise ValueError(f"Unexpected geometry type: {single_polygon.geom_type}")
 
-    selected_polygon = selected_polygon.buffer(10, join_style=1).buffer(-10.0, join_style=1)
+    simplified_polygon = simplify(selected_polygon, 1.0)
+
+    selected_polygon = simplified_polygon.buffer(10, join_style=1).buffer(-10.0, join_style=1)
     polygon = []
     for x, y in zip(selected_polygon.exterior.xy[0], selected_polygon.exterior.xy[1]):
         polygon.append(x)
@@ -161,11 +164,7 @@ def post_select_cutout(request: Request, id: Annotated[str, Form()], name: Annot
 
 @app.get("/view/")
 def get_view(request: Request):
-
     existing_cutouts = load_selected_cutouts()
-
-    for cutout in existing_cutouts:
-        cutout["image"] = turns_image_to_base64(Image.open(f"{selected_folder}/{cutout['uuid']}.png"), format="PNG")
 
     return templates.TemplateResponse(
         "view.html.jinja",
@@ -182,9 +181,6 @@ def get_view(request: Request):
 @app.get("/view/download/")
 def get_download_view(request: Request):
     existing_cutouts = load_selected_cutouts()
-
-    for cutout in existing_cutouts:
-        cutout["image"] = turns_image_to_base64(Image.open(f"{selected_folder}/{cutout['uuid']}.png"), format="PNG")
 
     view_template = templates.get_template("view.html.jinja")
     view_html = view_template.render(
