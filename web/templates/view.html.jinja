@@ -17,10 +17,20 @@ body, html {
     height: 100%;
 }
 
-#pinsImage {
+#canvasMapContainer {
     width: 100%;
     height: auto;
     display: block;
+}
+
+#info {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#info > article {
+  margin-bottom: 0;
 }
   </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
@@ -41,16 +51,24 @@ body, html {
     </article>
   </dialog>
   <div class="magnifier-container">
-      <img src="{{image}}" alt="Enamel Pins Collection" id="pinsImage" usemap="#pinmap">
+      <img src="{{image}}" alt="Enamel Pins Collection" id="canvasMapContainer" usemap="#pinmap">
   </div>
   <map name="pinmap" id="pinmap">
       {%- for cutout in existing_cutouts %}
       <area shape="poly" coords="{{cutout.polygon | join(',')}}" 
         data-name="{{cutout.name}}"
-        data-image="{{cutout.image}}"
         alt="{{cutout.name}}" data-key="{{cutout.uuid}}" href="#">
       {%- endfor %}
   </map>
+
+  <!-- Tooltip -->
+  <div id="info" style="display: none;">
+    <article>
+      <header><h3 id="infoPinName"></h3></header>
+      <p id="infoPinDescription"></p>
+    </article>
+  </div>
+
   <script>
 const modal = document.getElementById("modal");
 
@@ -60,7 +78,12 @@ const openingClass = "modal-is-opening";
 const closingClass = "modal-is-closing";
 const scrollbarWidthCssVar = "--pico-scrollbar-width";
 const animationDuration = 400; // ms
+const infoPinName = document.getElementById("infoPinName");
+const infoPinDescription = document.getElementById("infoPinDescription");
 let visibleModal = null;
+const buffer = 10;
+
+const $info = $("#info");
 
 // Toggle modal
 const toggleModal = (event) => {
@@ -75,10 +98,6 @@ const openModal = (modal) => {
   const {
     documentElement: html
   } = document;
-  //const scrollbarWidth = getScrollbarWidth();
-  //  if (scrollbarWidth) {
-  //    html.style.setProperty(scrollbarWidthCssVar, `${scrollbarWidth}px`);
-  //  }
   html.classList.add(isOpenClass, openingClass);
   setTimeout(() => {
     visibleModal = modal;
@@ -116,21 +135,83 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-$(function() {
-  $("#pinsImage").mapster({
-    enableAutoResizeSupport: true,
-    autoResize: true,
-    staticState: true,
-    fillColor: '000000',
-    mapKey: 'data-key',
-    fillOpacity: 0.5,
-    onClick: function(data) {
-      console.log(data);
-      toggleModal()
-      document.getElementById("pin-name").textContent = data.e.target.alt;
-      document.getElementById("pin-image").src = data.e.target.dataset.image;
-      console.log(data.e.target.data.image);
+const $canvasMapContainer = $("#canvasMapContainer");
 
+$(function() {
+  $canvasMapContainer.mapster({
+    enableAutoResizeSupport: true,  
+    autoResize: true,
+    isSelectable: false,
+    stroke: false,
+    strokeColor: '00FF00',
+    strokeWidth: 5,
+    mapKey: 'data-key',
+    fillOpacity: 0.0,
+    onClick: function (data) {
+      console.log(data.key);
+      console.log(data.options);
+      console.log($(this));
+      toggleModal();
+    },
+    onMouseout: function(data) {
+      $info.hide();
+    },
+    onMouseover: function(data) {
+      var $me = $(this)
+      console.log(data.key);
+      console.log(data.options);
+      console.log($me);
+
+      // Convert the coords to an array of integers
+      const coords = $me[0].coords.split(',');
+      const coordsInt = coords.map(coord => parseInt(coord, 10));
+
+      // Get the bounding box of the polygon
+      const x1 = Math.min(...coordsInt.filter((_, i) => i % 2 === 0));
+      const y1 = Math.min(...coordsInt.filter((_, i) => i % 2 === 1));
+      const x2 = Math.max(...coordsInt.filter((_, i) => i % 2 === 0));
+      const y2 = Math.max(...coordsInt.filter((_, i) => i % 2 === 1));
+
+      // Get the center of the bounding box
+      const centerX = (x1 + x2) / 2;
+
+      console.log(x1, y1, x2, y2, centerX); 
+
+
+      infoPinName.textContent = data.e.target.dataset.name;
+
+      const infoWidth = $info.width();
+      const infoHeight = $info.height();
+
+      var positionX = "centre"
+      if (x1 - infoWidth - buffer < 0) {
+        positionX = "left";
+      } else if (x2 + infoWidth + buffer > $canvasMapContainer.width()) {
+        positionX = "right";
+      }
+
+      var positionY = "top";
+      if (y1 - infoHeight - buffer < window.pageYOffset) {
+        positionY = "bottom";
+      }
+
+      const positionXmap = {
+        "left": x2 + buffer,
+        "centre": centerX - infoWidth/2,
+        "right": x1 - infoWidth - buffer
+      }
+
+      const positionYmap = {
+        "top": y1 - buffer - infoHeight,
+        "bottom": y2 + buffer
+      }
+      
+      $info.css({
+        top: positionYmap[positionY],
+        left: positionXmap[positionX],
+        boxShadow: "0px 0px 84px 0px rgba(0, 0, 0, 0.80)"
+        
+      }).show();
     }
   }).mapster('set', true, 'all');
 });
